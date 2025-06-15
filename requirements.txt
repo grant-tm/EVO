@@ -1,0 +1,8 @@
+pandas
+numpy
+tensorflow>=2.9.0
+alpaca-py
+scikit-learn
+matplotlib
+jupyter
+python-dotenv
