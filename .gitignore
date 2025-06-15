@@ -1,5 +1,6 @@
 .env
 *.csv
 *.keras
+__pycache__/*
 datastream/__pycache__/*
 indicators/__pycache__/*
