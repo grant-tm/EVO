@@ -7,3 +7,5 @@ matplotlib
 jupyter
 python-dotenv
 backtrader
+stable-baselines3[extra] 
+gym
