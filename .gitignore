@@ -4,3 +4,8 @@
 __pycache__/*
 datastream/__pycache__/*
 indicators/__pycache__/*
+checkpoints/*
+logs/*
+ppo_tensorboard/*
+ppo_trading_agent.zip
+ppo_trading_agent_vecnormalize.pkl
