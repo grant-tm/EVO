@@ -1,103 +1,89 @@
+from config import TRAINING_STEPS, BATCH_SIZE, LEARNING_RATE, CLIP_RANGE, ENTROPY_COEF_INIT, ENTROPY_COEF_FINAL, GAE_LAMBDA, GAMMA
 from trading_env import TradingEnv
 
-import os
 import pandas as pd
-
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, ProgressBarCallback
 from stable_baselines3.common.utils import get_schedule_fn
 
-# =========================================================
-# Prepare Dataset
-# =========================================================
+# trains a model with the default training and reward-shaping parameters from config.py
+def train_agent():
+    train_with_genome({})
 
-# load dataset from .csv
-df = pd.read_csv("preprocessed_training_data.csv")
-df.dropna(inplace=True)
+# trains a model with training and reward-shaping parameters defined in a genome
+def train_with_genome(genome: dict):
+    
+    # === Load Data ===
+    df = pd.read_csv("preprocessed_training_data.csv")
+    df.dropna(inplace=True)
+    split_idx = int(len(df) * 0.95)
+    train_df = df.iloc[:split_idx].copy()
+    eval_df = df.iloc[split_idx:].copy()
 
-# split dataset (95% train, 5% eval)
-split_idx = int(len(df) * 0.95)
-train_df = df.iloc[:split_idx].copy()
-eval_df = df.iloc[split_idx:].copy()
+    # === Create Environments ===
+    train_env = DummyVecEnv([lambda: Monitor(TradingEnv(train_df))])
+    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=False)
 
-# =========================================================
-# Prepare Environments
-# =========================================================
+    eval_env = DummyVecEnv([lambda: Monitor(TradingEnv(eval_df))])
+    eval_env = VecNormalize.load("ppo_trading_agent_vecnormalize.pkl", eval_env)
+    eval_env.training = False
+    eval_env.norm_reward = False
 
-# create training environment
-def make_train_env():
-    return Monitor(TradingEnv(train_df))
+    # === Define & Add Callbacks ===
+    class RewardLoggerCallback(BaseCallback):
+        def __init__(self, verbose=0): super().__init__(verbose)
+        def _on_step(self) -> bool:
+            if "reward" in self.locals:
+                self.logger.record("rollout/raw_reward", self.locals["reward"])
+            return True
 
-train_env = DummyVecEnv([make_train_env])
-train_env = VecNormalize(train_env, norm_obs=True, norm_reward=False)
+    class EntropyAnnealingCallback(BaseCallback):
+        def __init__(self, initial_coef, final_coef, total_timesteps, verbose=0):
+            super().__init__(verbose)
+            self.initial_coef = initial_coef
+            self.final_coef = final_coef
+            self.total_timesteps = total_timesteps
 
-# create evaluation environment
-def make_eval_env():
-    return Monitor(TradingEnv(eval_df))
+        def _on_step(self) -> bool:
+            progress = self.num_timesteps / self.total_timesteps
+            new_coef = self.initial_coef + progress * (self.final_coef - self.initial_coef)
+            self.model.ent_coef = new_coef
+            return True
 
-eval_env = DummyVecEnv([make_eval_env])
-eval_env = VecNormalize.load("ppo_trading_agent_vecnormalize.pkl", eval_env)
-eval_env.training = False
-eval_env.norm_reward = False
+    callbacks = [
+        RewardLoggerCallback(),
+        ProgressBarCallback(),
+        EntropyAnnealingCallback(
+            genome.get("entropy_coef_init", ENTROPY_COEF_INIT),
+            genome.get("entropy_coef_final", ENTROPY_COEF_FINAL), 
+            TRAINING_STEPS
+        )
+    ]
+    
+    # === Define PPO Model ===
+    model = PPO(
+        "MlpPolicy",
+        train_env,
+        clip_range=genome.get("clip_range", CLIP_RANGE),
+        verbose=1,
+        tensorboard_log="./ppo_tensorboard/",
+        n_steps=512,
+        batch_size=genome.get("batch_size", BATCH_SIZE),
+        learning_rate=get_schedule_fn(genome.get("learning_rate", LEARNING_RATE)),
+        ent_coef=genome.get("entropy_coef_init", ENTROPY_COEF_INIT),
+        gae_lambda=genome.get("gae_lambda", GAE_LAMBDA),
+        gamma=genome.get("gamma", GAMMA),
+        policy_kwargs=dict(net_arch=dict(pi=[128, 128], vf=[128, 128]))
+    )
 
-# check environment compliance
-check_env(TradingEnv(train_df), warn=True)
+    # === Train & Save the Model ===
+    model.learn(
+        total_timesteps=TRAINING_STEPS,
+        callback=callbacks
+    )
 
-# =========================================================
-# Define callbacks
-# =========================================================
-
-# evaluate agent every 10000 training steps
-eval_callback = EvalCallback(
-    eval_env,
-    best_model_save_path="./checkpoints/",
-    log_path="./logs/",
-    eval_freq=10_000,
-    n_eval_episodes=1,
-    deterministic=True,
-    render=False
-)
-
-# log raw rewards
-class RewardLoggerCallback(BaseCallback):
-    def __init__(self, verbose=0):
-        super().__init__(verbose)
-
-    def _on_step(self) -> bool:
-        if "reward" in self.locals:
-            self.logger.record("rollout/raw_reward", self.locals["reward"])
-        return True
-
-# =========================================================
-# Train Model
-# =========================================================
-
-# define PPO model
-model = PPO(
-    "MlpPolicy",
-    train_env,
-    clip_range_vf=0.2,
-    verbose=1,
-    tensorboard_log="./ppo_tensorboard/",
-    n_steps=512,
-    batch_size=64,
-    learning_rate=get_schedule_fn(3e-4),
-    ent_coef=0.01,
-    gae_lambda=0.90,
-    gamma=0.95,
-    policy_kwargs = dict(net_arch=dict(pi=[128, 128], vf=[128, 128]))
-)
-
-# train ppo model
-model.learn(
-    total_timesteps=300_000,
-    callback=[eval_callback, RewardLoggerCallback(), ProgressBarCallback()]
-)
-
-# save model and environment
-model.save("ppo_trading_agent")
-train_env.save("ppo_trading_agent_vecnormalize.pkl")
-print("Model saved.")
+    model.save("ppo_trading_agent")
+    train_env.save("ppo_trading_agent_vecnormalize.pkl")
+    print("Model trained and saved.")

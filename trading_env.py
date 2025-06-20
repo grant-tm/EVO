@@ -1,4 +1,4 @@
-from config import FEATURES, SEQ_LEN, TP_PCT, SL_PCT, LOOKAHEAD
+from config import FEATURES, SEQ_LEN, TP_PCT, SL_PCT, IDLE_PENALTY, SL_PENALTY_COEF, TP_REWARD_COEF, TIMEOUT_DURATION, TIMEOUT_REWARD_COEF, ONGOING_REWARD_COEF, REWARD_CLIP_RANGE, MAX_EPISODE_STEPS
 
 import numpy as np
 
@@ -8,16 +8,25 @@ from gymnasium import spaces
 class TradingEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
-    def __init__(self, df):
+    def __init__(self, df, reward_params=None):
         super().__init__()
         self.df = df.reset_index(drop=True)
         self.features = FEATURES
         self.seq_len = SEQ_LEN
         self.tp_pct = TP_PCT
         self.sl_pct = SL_PCT
-        self.lookahead = LOOKAHEAD
-        self.max_episode_steps = 5000
 
+        # Reward shaping params (with defaults)
+        reward_params = reward_params or {}
+        self.idle_penalty = reward_params.get("idle_penalty", IDLE_PENALTY)
+        self.sl_penalty_coef = reward_params.get("sl_penalty_coef", SL_PENALTY_COEF)
+        self.tp_reward_coef = reward_params.get("tp_reward_coef", TP_REWARD_COEF)
+        self.timeout_duration = reward_params.get("timeout_duration", TIMEOUT_DURATION)
+        self.timeout_reward_coef = reward_params.get("timeout_reward_coef", TIMEOUT_REWARD_COEF)
+        self.ongoing_reward_coef = reward_params.get("ongoing_reward_coef", ONGOING_REWARD_COEF)
+        self.reward_clip_range = reward_params.get("reward_clip_range", REWARD_CLIP_RANGE)
+        self.max_episode_steps = reward_params.get("max_episode_steps", MAX_EPISODE_STEPS)
+        
         self.action_space = spaces.Discrete(3)  # 0=Hold, 1=Buy, 2=Sell
         self.observation_space = spaces.Box(
             low=-1e10,
@@ -31,7 +40,7 @@ class TradingEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         self.index = self.seq_len
-        self.episode_step_count = 0 
+        self.episode_step_count = 0
         self.position = 0  # 0 = no position, 1 = long, -1 = short
         self.entry_price = None
         self.entry_index = None
@@ -40,21 +49,21 @@ class TradingEnv(gym.Env):
         return self._get_obs(), {}
 
     def _get_obs(self):
-        window = self.df.iloc[self.index - self.seq_len : self.index]
+        window = self.df.iloc[self.index - self.seq_len: self.index]
         obs = window[self.features].to_numpy(dtype=np.float32)
         obs = np.nan_to_num(obs, nan=0.0, posinf=1e10, neginf=-1e10)
         return obs
 
     def _get_current_price(self):
         return self.df.loc[self.index, "close"]
-    
+
     def step(self, action):
         current_price = self._get_current_price()
         reward = 0.0
 
-        # Penalty for being idle too long
+        # Apply penalty for being idle too long (encourage trading)
         if self.position == 0:
-            reward -= 0.001  # discourage inaction
+            reward -= self.idle_penalty
 
         # Reward shaping while holding a position
         if self.position != 0:
@@ -64,19 +73,26 @@ class TradingEnv(gym.Env):
 
             unrealized = change * direction
 
+            # stop loss hit: close trade for a loss and apply penalty
             if unrealized <= -self.sl_pct:
-                reward += unrealized * 10.0  # penalty for hitting stop loss
+                reward += unrealized * self.sl_penalty_coef
                 self._close_position()
+            
+            # take profit hit: close trade for a profit and apply reward
             elif unrealized >= self.tp_pct:
-                reward += unrealized * 15.0  # reward for hitting take profit
+                reward += unrealized * self.tp_reward_coef
                 self._close_position()
-            elif step_duration >= 3:
-                reward += unrealized * 2.0   # shaped reward on timeout
+            
+            # trade timeout hit: close trade and apply scaled reward (can be positive or negative)
+            elif step_duration >= self.timeout_duration:
+                reward += unrealized * self.timeout_reward_coef
                 self._close_position()
+            
+            # trade held: apply small reward/penalty for unrealized pnl increase/decrease
             else:
-                reward += unrealized * 0.2   # reward/punish for ongoing trend alignment
+                reward += unrealized * self.ongoing_reward_coef
 
-        # Handle new action
+        # Allow agent to open a new position if no position is currently held
         if self.position == 0:
             if action == 1:
                 self._open_position(1, current_price)
@@ -84,12 +100,12 @@ class TradingEnv(gym.Env):
                 self._open_position(-1, current_price)
 
         # Normalize reward
-        reward = np.clip(reward, -1.0, 1.0)
+        reward = np.clip(reward, self.reward_clip_range[0], self.reward_clip_range[1])
 
         self.index += 1
         self.episode_step_count += 1
         self.done = (
-            self.index >= len(self.df) - self.lookahead
+            self.index >= len(self.df)
             or self.episode_step_count >= self.max_episode_steps
         )
 
