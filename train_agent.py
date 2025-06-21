@@ -1,4 +1,4 @@
-from config import TRAINING_STEPS, BATCH_SIZE, LEARNING_RATE, CLIP_RANGE, ENTROPY_COEF_INIT, ENTROPY_COEF_FINAL, GAE_LAMBDA, GAMMA
+from config import DATA_PATH, MODEL_DIR, MODEL_NAME, TRAINING_STEPS, BATCH_SIZE, LEARNING_RATE, CLIP_RANGE, ENTROPY_COEF_INIT, ENTROPY_COEF_FINAL, GAE_LAMBDA, GAMMA
 from trading_env import TradingEnv
 
 import pandas as pd
@@ -10,13 +10,13 @@ from stable_baselines3.common.utils import get_schedule_fn
 
 # trains a model with the default training and reward-shaping parameters from config.py
 def train_agent():
-    train_with_genome({})
+    train_with_genome(MODEL_NAME, {})
 
 # trains a model with training and reward-shaping parameters defined in a genome
-def train_with_genome(genome: dict):
+def train_with_genome(genome: dict, model_name: str = None):
     
     # === Load Data ===
-    df = pd.read_csv("preprocessed_training_data.csv")
+    df = pd.read_csv(DATA_PATH)
     df.dropna(inplace=True)
     split_idx = int(len(df) * 0.95)
     train_df = df.iloc[:split_idx].copy()
@@ -53,7 +53,7 @@ def train_with_genome(genome: dict):
             return True
 
     callbacks = [
-        RewardLoggerCallback(),
+        #RewardLoggerCallback(),
         ProgressBarCallback(),
         EntropyAnnealingCallback(
             genome.get("entropy_coef_init", ENTROPY_COEF_INIT),
@@ -67,7 +67,7 @@ def train_with_genome(genome: dict):
         "MlpPolicy",
         train_env,
         clip_range=genome.get("clip_range", CLIP_RANGE),
-        verbose=1,
+        verbose=0,
         tensorboard_log="./ppo_tensorboard/",
         n_steps=512,
         batch_size=genome.get("batch_size", BATCH_SIZE),
@@ -84,6 +84,7 @@ def train_with_genome(genome: dict):
         callback=callbacks
     )
 
-    model.save("ppo_trading_agent")
-    train_env.save("ppo_trading_agent_vecnormalize.pkl")
-    print("Model trained and saved.")
+    if model_name is None:
+        model_name = MODEL_NAME
+
+    model.save(f"{MODEL_DIR}/{model_name}")
