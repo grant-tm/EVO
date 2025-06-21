@@ -24,6 +24,7 @@ class GeneticSearch:
         self.max_generations = max_generations
         self.mutation_rate = mutation_rate
         self.elite_fraction = elite_fraction
+        self.random_fraction = 0.25
         self.seed = seed
         self.history = []  # stores best fitness per generation
 
@@ -31,8 +32,10 @@ class GeneticSearch:
             random.seed(seed)
 
     # trains PPO models with training and reward-shaping parameters specified by a genome
-    def train_models(genomes: List[Genome]) -> None:
+    def train_models(self, genomes: List[Genome]) -> None:
         os.makedirs(MODEL_DIR, exist_ok=True)
+
+        print(f"[TRAIN]: Preparing to train {len(genomes)} models")
 
         # for each genome, train a model if no model with the same genome already exists
         for genome in genomes:
@@ -43,16 +46,17 @@ class GeneticSearch:
             # if model with genome has already been trained, skip training
             model_path = os.path.join(MODEL_DIR, f"{genome_id}.zip")
             if os.path.exists(model_path):
-                print(f"[SKIP] Model for genome {genome_id} already exists.")
+                print(f"[TRAIN]: Skipping training model for existing genome {genome_id}")
                 continue
 
             # train model with genome
-            print(f"[TRAIN] Training model for genome {genome_id}")
-            model = train_with_genome(genome.values)
-            model.save(model_path)
+            print(f"[TRAIN]: Training model with genome {genome_id}")
+            train_with_genome(genome.values, model_name=genome_id)
 
     # evaluates performance for PPO models trained with parameters defined by a genome
-    def evaluate_models(genomes: List[Genome]) -> List[Tuple[Genome, float]]:
+    def evaluate_models(self, genomes: List[Genome]) -> List[Tuple[Genome, float]]:
+        print(f"[EVAL]: Evaluating {len(genomes)} models over {NUM_BACKTESTS} backtests of length {BACKTEST_LENGTH}")
+        
         evaluation_results = []
 
         for genome in genomes:
@@ -63,12 +67,12 @@ class GeneticSearch:
 
             # assert model has already been trained
             if not os.path.exists(model_path):
-                raise FileNotFoundError(f"Model for genome {genome_id} not found.")
+                raise FileNotFoundError(f"[EVAL]: Model for genome {genome_id} not found.")
 
             # load and backtest model
-            model = PPO.load(model_path)
-            score = multi_backtest(model, NUM_BACKTESTS, BACKTEST_LENGTH)  # Assume this returns Sharpe, PnL, etc.
-            
+            score = multi_backtest(model_path, NUM_BACKTESTS, BACKTEST_LENGTH)  # Assume this returns Sharpe, PnL, etc.
+            print(f"[EVAL]: Fitness score {score} for genome {genome_id}")
+
             evaluation_results.append((genome, score))
 
         return evaluation_results
@@ -84,12 +88,7 @@ class GeneticSearch:
         for gen in range(self.max_generations):
             
             print(f"\n=== Generation {gen + 1} ===")
-
-            for individual in population:
-                print("--- GENOME VALUES ---")
-                individual.print_values()
-
-            '''
+            
             # train and evaluate models
             self.train_models(population)
             eval_results = self.evaluate_models(population)
@@ -100,7 +99,9 @@ class GeneticSearch:
             # Logging
             top_score = eval_results[0][1]
             avg_score = sum(f for _, f in eval_results) / len(eval_results)
-            print(f"Best fitness: {top_score:.4f} | Avg fitness: {avg_score:.4f}")
+            
+            print(f"=== Best fitness: {top_score:.4f} | Avg fitness: {avg_score:.4f} ===")
+            
             self.history.append(top_score)
 
             if top_score > best_fitness:
@@ -110,14 +111,21 @@ class GeneticSearch:
             n_elite = max(1, int(self.elite_fraction * self.population_size))
             elites = [g for g, _ in eval_results[:n_elite]]
 
-            # Fill rest of population with mutated copies of elites
+            # Fill new population
             new_population = elites.copy()
-            while len(new_population) < self.population_size:
+        
+            # Create mutated offspring
+            n_mutants = self.population_size - len(elites) - n_random
+            for _ in range(n_mutants):
                 parent = random.choice(elites)
                 child = parent.mutate(mutation_rate=self.mutation_rate)
                 new_population.append(child)
 
+            # Create random newcomers
+            n_random = int(self.random_fraction * self.population_size)
+            for _ in range(n_random):
+                new_population.append(Genome.random())
+
             population = new_population
-            '''
 
         return best_genome, best_fitness
