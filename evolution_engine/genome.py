@@ -56,7 +56,7 @@ class Choice:
 class Genome:
     parameter_space: Dict[str, Union[Uniform, IntRange, Choice]] = {
         # Training
-        "learning_rate": Uniform(0.001, 0.01, precision=6),
+        "learning_rate": Uniform(0.0001, 0.01, precision=6),
         "entropy_coef_init": Uniform(0.01, 0.1, precision=5),
         "entropy_coef_final": Uniform(0.001, 0.01, precision=5),
         "gae_lambda": Uniform(0.90, 0.999, precision=4),
