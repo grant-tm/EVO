@@ -5,7 +5,7 @@ import pandas as pd
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, ProgressBarCallback
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, ProgressBarCallback, StopTrainingOnNoModelImprovement
 from stable_baselines3.common.utils import get_schedule_fn
 
 # trains a model with the default training and reward-shaping parameters from config.py
@@ -25,6 +25,7 @@ def train_with_genome(genome: dict, model_name: str = None):
     # === Create Environments ===
     train_env = DummyVecEnv([lambda: Monitor(TradingEnv(train_df))])
     train_env = VecNormalize(train_env, norm_obs=True, norm_reward=False)
+    train_env.save("ppo_trading_agent_vecnormalize.pkl")
 
     eval_env = DummyVecEnv([lambda: Monitor(TradingEnv(eval_df))])
     eval_env = VecNormalize.load("ppo_trading_agent_vecnormalize.pkl", eval_env)
@@ -52,6 +53,21 @@ def train_with_genome(genome: dict, model_name: str = None):
             self.model.ent_coef = new_coef
             return True
 
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path=f"{MODEL_DIR}/{model_name}",
+        log_path=f"{MODEL_DIR}/{model_name}/logs",
+        eval_freq=25_000,
+        n_eval_episodes=10,
+        deterministic=True,
+        render=False,
+        callback_after_eval=StopTrainingOnNoModelImprovement(
+            max_no_improvement_evals=5,
+            min_evals=3,
+            verbose=0
+        )
+    )
+
     callbacks = [
         #RewardLoggerCallback(),
         ProgressBarCallback(),
@@ -59,7 +75,8 @@ def train_with_genome(genome: dict, model_name: str = None):
             genome.get("entropy_coef_init", ENTROPY_COEF_INIT),
             genome.get("entropy_coef_final", ENTROPY_COEF_FINAL), 
             TRAINING_STEPS
-        )
+        ),
+        eval_callback
     ]
     
     # === Define PPO Model ===
