@@ -1,11 +1,10 @@
 .env
+*.zip
 *.csv
+*.pkl
 *.keras
-__pycache__/*
-datastream/__pycache__/*
-indicators/__pycache__/*
+**/__pycache__/
+trained_models/*
 checkpoints/*
 logs/*
 ppo_tensorboard/*
-ppo_trading_agent.zip
-ppo_trading_agent_vecnormalize.pkl
