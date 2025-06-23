@@ -19,7 +19,7 @@ SIM_SPEED = 0.8 # seconds per minute-bar emission
 DATA_PATH = "preprocessed_training_data.csv"
 MODEL_DIR = "trained_models"
 MODEL_NAME = "ppo_trading_agent.zip"
-TRAINING_STEPS = 250_000
+TRAINING_STEPS = 1_000_000
 SEQ_LEN = 15
 FEATURES = [
     "open", "high", "low", "close", "volume",
@@ -52,5 +52,5 @@ MAX_EPISODE_STEPS = 5000
 # GENETIC SEARCH VARIABLES
 MUTATION_RATE = 0.1
 ELITE_PROPORTION = 0.2
-NUM_BACKTESTS = 200
+NUM_BACKTESTS = 500
 BACKTEST_LENGTH = 360
