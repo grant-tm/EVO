@@ -77,7 +77,7 @@ class GeneticSearch:
 
         return evaluation_results
 
-    def run(self) -> Tuple[Genome, float]:
+    def run(self, init_genome = Optional[Genome], retrain_init_genome = Optional[bool]) -> Tuple[Genome, float]:
         
         # Initialize random population
         population = [Genome.random() for _ in range(self.population_size)]
@@ -89,6 +89,11 @@ class GeneticSearch:
             
             print(f"\n=== Generation {gen + 1} ===")
             
+            for genome in population:
+                print(f"genome_id: {genome.hash()}")
+                genome.print_values()
+                print("")
+
             # train and evaluate models
             self.train_models(population)
             eval_results = self.evaluate_models(population)
@@ -113,18 +118,26 @@ class GeneticSearch:
 
             # Fill new population
             new_population = elites.copy()
+            existing_hashes = {genome.hash() for genome in new_population}
         
-            # Create mutated offspring
-            n_mutants = self.population_size - len(elites) - n_random
-            for _ in range(n_mutants):
-                parent = random.choice(elites)
-                child = parent.mutate(mutation_rate=self.mutation_rate)
-                new_population.append(child)
-
             # Create random newcomers
             n_random = int(self.random_fraction * self.population_size)
-            for _ in range(n_random):
-                new_population.append(Genome.random())
+            while len(new_population) < n_elite + n_random:
+                new_genome = Genome.random()
+                genome_id = new_genome.hash()
+                if genome_id not in existing_hashes:
+                    new_population.append(new_genome)
+                    existing_hashes.add(genome_id)
+            
+            # Create mutated offspring
+            n_mutants = self.population_size - len(elites) - n_random
+            while len(new_population) < self.population_size:
+                parent = random.choice(elites)
+                child = parent.mutate(mutation_rate=self.mutation_rate)
+                genome_id = child.hash()
+                if genome_id not in existing_hashes:
+                    new_population.append(child)
+                    existing_hashes.add(genome_id)  
 
             population = new_population
 
