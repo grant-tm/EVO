@@ -27,7 +27,10 @@ def train_with_genome(genome: dict, model_name: str = None):
     train_env = VecNormalize(train_env, norm_obs=True, norm_reward=False)
     train_env.save("ppo_trading_agent_vecnormalize.pkl")
 
-    eval_env = DummyVecEnv([lambda: Monitor(TradingEnv(eval_df))])
+    #eval_env = DummyVecEnv([lambda: Monitor(TradingEnv(eval_df))])
+    eval_env = DummyVecEnv([lambda: Monitor(
+        TradingEnv(eval_df, reward_params={"max_episode_steps": 15_000})
+    )])
     eval_env = VecNormalize.load("ppo_trading_agent_vecnormalize.pkl", eval_env)
     eval_env.training = False
     eval_env.norm_reward = False
@@ -55,10 +58,10 @@ def train_with_genome(genome: dict, model_name: str = None):
 
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=f"{MODEL_DIR}/{model_name}",
+        best_model_save_path=f"{MODEL_DIR}/{model_name}/",
         log_path=f"{MODEL_DIR}/{model_name}/logs",
         eval_freq=25_000,
-        n_eval_episodes=10,
+        n_eval_episodes=3,
         deterministic=True,
         render=False,
         callback_after_eval=StopTrainingOnNoModelImprovement(
