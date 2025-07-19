@@ -1,0 +1,7 @@
+# Alpaca API Keys
+# Get these from https://alpaca.markets/
+ALPACA_API_KEY=your_alpaca_api_key_here
+ALPACA_SECRET_KEY=your_alpaca_secret_key_here
+
+# Note: Copy this content to a .env file and fill in your actual API keys
+# The .env file should never be committed to version control 
