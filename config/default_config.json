@@ -1,0 +1,60 @@
+{
+  "trading": {
+    "symbol": "SPY",
+    "trade_qty": 1,
+    "use_simulation": true,
+    "sim_speed": 0.8,
+    "initial_capital": 100000.0,
+    "commission": 0.001,
+    "slippage": 0.0
+  },
+  "data": {
+    "data_path": "data/processed_data.csv",
+    "seq_len": 15,
+    "features": [
+      "open", "high", "low", "close", "volume",
+      "return", "volatility", "sma_5", "sma_20", "rsi", "macd"
+    ],
+    "start_time": "2022-01-01T00:00:00",
+    "end_time": "2023-12-31T23:59:59"
+  },
+  "training": {
+    "model_dir": "trained_models",
+    "model_name": "ppo_trading_agent.zip",
+    "training_steps": 1000000,
+    "learning_rate": 0.0003,
+    "clip_range": 0.2,
+    "batch_size": 64,
+    "entropy_coef_init": 0.1,
+    "entropy_coef_final": 0.01,
+    "gae_lambda": 0.95,
+    "gamma": 0.95
+  },
+  "reward": {
+    "tp_pct": 0.01,
+    "sl_pct": 0.01,
+    "idle_penalty": 0.0003,
+    "sl_penalty_coef": 10.0,
+    "tp_reward_coef": 15.0,
+    "timeout_duration": 3,
+    "timeout_reward_coef": 2.0,
+    "ongoing_reward_coef": 0.2,
+    "reward_clip_range": [-1.0, 1.0],
+    "max_episode_steps": 5000
+  },
+  "optimization": {
+    "population_size": 50,
+    "max_generations": 20,
+    "mutation_rate": 0.1,
+    "crossover_rate": 0.8,
+    "elite_fraction": 0.2,
+    "random_fraction": 0.1,
+    "num_backtests": 10,
+    "backtest_length": 500
+  },
+  "alpaca": {
+    "api_key": null,
+    "api_secret": null,
+    "paper_trading": true
+  }
+} 
