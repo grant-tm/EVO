@@ -201,7 +201,7 @@ def get_file_size_mb(file_path: Union[str, Path]) -> float:
     """
     file_path = Path(file_path)
     if not file_path.exists():
-        return 0.0
+        raise FileNotFoundError(f"File not found: {file_path}")
     
     return file_path.stat().st_size / (1024 * 1024)
 
