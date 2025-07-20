@@ -11,12 +11,15 @@ from evo.utils.decorators import (
     retry, timeout, cache_result, log_execution_time, validate_inputs
 )
 
+pytestmark = [
+    pytest.mark.unit,
+    pytest.mark.utils,
+    pytest.mark.decorators
+]
 
 class TestRetryDecorator:
     """Test retry decorator functionality."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_retry_success_first_try(self):
         """Test retry decorator when function succeeds on first try."""
         @retry(max_attempts=3)
@@ -26,8 +29,6 @@ class TestRetryDecorator:
         result = test_function()
         assert result == "success"
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_retry_success_after_failures(self):
         """Test retry decorator when function succeeds after some failures."""
         call_count = 0
@@ -44,8 +45,6 @@ class TestRetryDecorator:
         assert result == "success"
         assert call_count == 3
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_retry_all_attempts_fail(self):
         """Test retry decorator when all attempts fail."""
         @retry(max_attempts=3, delay=0.01)
@@ -56,8 +55,6 @@ class TestRetryDecorator:
             test_function()
         assert "Persistent failure" in str(exc_info.value)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_retry_custom_exceptions(self):
         """Test retry decorator with custom exception types."""
         call_count = 0
@@ -73,8 +70,6 @@ class TestRetryDecorator:
         result = test_function()
         assert result == "success"
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_retry_non_retryable_exception(self):
         """Test retry decorator with non-retryable exception."""
         @retry(max_attempts=3, delay=0.01, exceptions=ValueError)
@@ -85,8 +80,6 @@ class TestRetryDecorator:
             test_function()
         assert "Non-retryable error" in str(exc_info.value)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_retry_backoff(self):
         """Test retry decorator with exponential backoff."""
         call_count = 0
@@ -110,8 +103,6 @@ class TestRetryDecorator:
             delay2 = start_times[2] - start_times[1]
             assert delay2 > delay1  # Second delay should be longer
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     @pytest.mark.asyncio
     async def test_retry_async_success(self):
         """Test retry decorator with async function."""
@@ -129,8 +120,6 @@ class TestRetryDecorator:
         assert result == "success"
         assert call_count == 3
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     @pytest.mark.asyncio
     async def test_retry_async_all_fail(self):
         """Test retry decorator with async function that always fails."""
@@ -146,8 +135,6 @@ class TestRetryDecorator:
 class TestTimeoutDecorator:
     """Test timeout decorator functionality."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_timeout_function_completes(self):
         """Test timeout decorator when function completes in time."""
         @timeout(seconds=1.0)
@@ -157,8 +144,6 @@ class TestTimeoutDecorator:
         result = test_function()
         assert result == "success"
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_timeout_function_times_out(self):
         """Test timeout decorator when function times out."""
         @timeout(seconds=0.1)
@@ -170,8 +155,6 @@ class TestTimeoutDecorator:
             test_function()
         assert "timed out after 0.1 seconds" in str(exc_info.value)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     @pytest.mark.asyncio
     async def test_timeout_async_completes(self):
         """Test timeout decorator with async function that completes."""
@@ -183,8 +166,6 @@ class TestTimeoutDecorator:
         result = await test_function()
         assert result == "success"
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     @pytest.mark.asyncio
     async def test_timeout_async_times_out(self):
         """Test timeout decorator with async function that times out."""
@@ -201,8 +182,6 @@ class TestTimeoutDecorator:
 class TestCacheResultDecorator:
     """Test cache_result decorator functionality."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_cache_result_basic(self):
         """Test basic caching functionality."""
         call_count = 0
@@ -228,8 +207,6 @@ class TestCacheResultDecorator:
         assert result3 == 5
         assert call_count == 2
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_cache_result_with_kwargs(self):
         """Test caching with keyword arguments."""
         call_count = 0
@@ -250,8 +227,6 @@ class TestCacheResultDecorator:
         assert result3 == 1
         assert call_count == 2  # Only 2 unique calls
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_cache_result_ttl_expiration(self):
         """Test cache expiration with TTL."""
         call_count = 0
@@ -280,8 +255,6 @@ class TestCacheResultDecorator:
         assert result3 == 10
         assert call_count == 2
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_cache_result_max_size(self):
         """Test cache size limit."""
         call_count = 0
@@ -312,8 +285,6 @@ class TestCacheResultDecorator:
 class TestLogExecutionTimeDecorator:
     """Test log_execution_time decorator functionality."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     @patch('evo.utils.decorators.get_logger')
     def test_log_execution_time_sync(self, mock_get_logger):
         """Test execution time logging for sync function."""
@@ -333,8 +304,6 @@ class TestLogExecutionTimeDecorator:
         assert "test_function" in call_args
         assert "completed in" in call_args
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     @pytest.mark.asyncio
     @patch('evo.utils.decorators.get_logger')
     async def test_log_execution_time_async(self, mock_get_logger):
@@ -355,8 +324,6 @@ class TestLogExecutionTimeDecorator:
         assert "test_function" in call_args
         assert "completed in" in call_args
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     @patch('evo.utils.decorators.get_logger')
     def test_log_execution_time_custom_logger(self, mock_get_logger):
         """Test execution time logging with custom logger."""
@@ -377,8 +344,6 @@ class TestLogExecutionTimeDecorator:
 class TestValidateInputsDecorator:
     """Test validate_inputs decorator functionality."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_validate_inputs_success(self):
         """Test input validation when all validators pass."""
         def is_positive(x):
@@ -394,8 +359,6 @@ class TestValidateInputsDecorator:
         result = test_function(4)  # Positive and even
         assert result == 8
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_validate_inputs_failure(self):
         """Test input validation when validator fails."""
         def is_positive(x):
@@ -409,8 +372,6 @@ class TestValidateInputsDecorator:
             test_function(-1)  # Not positive
         assert "Input validation failed" in str(exc_info.value)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_validate_inputs_multiple_args(self):
         """Test input validation with multiple arguments."""
         def is_positive(x):
@@ -434,8 +395,6 @@ class TestValidateInputsDecorator:
         with pytest.raises(ValueError):
             test_function(5, 123)  # Second validator fails
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_validate_inputs_no_validators(self):
         """Test input validation with no validators."""
         @validate_inputs()
@@ -445,8 +404,6 @@ class TestValidateInputsDecorator:
         result = test_function(5)
         assert result == 10
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_validate_inputs_custom_error_message(self):
         """Test input validation with custom error messages."""
         def is_positive(x):
@@ -466,8 +423,6 @@ class TestValidateInputsDecorator:
 class TestDecoratorIntegration:
     """Test integration between multiple decorators."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_retry_with_timeout(self):
         """Test combining retry and timeout decorators."""
         call_count = 0
@@ -485,8 +440,6 @@ class TestDecoratorIntegration:
         assert result == "success"
         assert call_count == 2
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_cache_with_logging(self):
         """Test combining cache and logging decorators."""
         @cache_result()
@@ -502,8 +455,6 @@ class TestDecoratorIntegration:
         result2 = test_function(5)
         assert result2 == 10
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_validate_with_retry(self):
         """Test combining validation and retry decorators."""
         def is_positive(x):

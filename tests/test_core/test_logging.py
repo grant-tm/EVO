@@ -14,12 +14,15 @@ from evo.core.logging import (
     CorrelationFilter, StructuredFormatter
 )
 
+pytestmark = [
+    pytest.mark.core,
+    pytest.mark.logging
+]
 
 class TestLoggingSetup:
     """Test logging setup and configuration."""
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_setup_logging_console_only(self):
         """Test setting up logging with console output only."""
         logger = setup_logging(level="DEBUG", enable_file=False, enable_console=True)
@@ -32,7 +35,6 @@ class TestLoggingSetup:
         assert len(console_handlers) > 0
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_setup_logging_file_only(self, temp_dir):
         """Test setting up logging with file output only."""
         log_file = temp_dir / "test.log"
@@ -51,7 +53,6 @@ class TestLoggingSetup:
         assert len(file_handlers) > 0
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_setup_logging_both(self, temp_dir):
         """Test setting up logging with both console and file output."""
         log_file = temp_dir / "test.log"
@@ -73,7 +74,6 @@ class TestLoggingSetup:
         assert len(file_handlers) > 0
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_get_logger(self):
         """Test getting a logger instance."""
         logger = get_logger("test_module")
@@ -87,7 +87,6 @@ class TestCorrelationFilter:
     """Test correlation ID filtering."""
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_correlation_filter_creation(self):
         """Test creating a correlation filter."""
         filter_obj = CorrelationFilter()
@@ -95,7 +94,6 @@ class TestCorrelationFilter:
         assert filter_obj.correlation_id is None
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_correlation_filter_set_id(self):
         """Test setting correlation ID."""
         filter_obj = CorrelationFilter()
@@ -105,7 +103,6 @@ class TestCorrelationFilter:
         assert filter_obj.correlation_id == correlation_id
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_correlation_filter_filtering(self):
         """Test that correlation filter adds ID to records."""
         filter_obj = CorrelationFilter()
@@ -131,7 +128,6 @@ class TestCorrelationFilter:
         assert record.correlation_id == correlation_id
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_correlation_filter_no_id(self):
         """Test correlation filter when no ID is set."""
         filter_obj = CorrelationFilter()
@@ -158,7 +154,6 @@ class TestStructuredFormatter:
     """Test structured JSON formatter."""
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_structured_formatter_basic(self):
         """Test basic structured formatting."""
         formatter = StructuredFormatter()
@@ -190,7 +185,6 @@ class TestStructuredFormatter:
         assert "timestamp" in log_entry
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_structured_formatter_with_correlation_id(self):
         """Test structured formatting with correlation ID."""
         formatter = StructuredFormatter()
@@ -214,7 +208,6 @@ class TestStructuredFormatter:
         assert log_entry["correlation_id"] == "test-789"
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_structured_formatter_with_extra_fields(self):
         """Test structured formatting with extra fields."""
         formatter = StructuredFormatter()
@@ -240,7 +233,6 @@ class TestStructuredFormatter:
         assert log_entry["action"] == "login"
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_structured_formatter_with_exception(self):
         """Test structured formatting with exception info."""
         formatter = StructuredFormatter()
@@ -269,7 +261,6 @@ class TestCorrelationIDFunctions:
     """Test correlation ID utility functions."""
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_generate_correlation_id(self):
         """Test generating correlation IDs."""
         id1 = generate_correlation_id()
@@ -280,7 +271,6 @@ class TestCorrelationIDFunctions:
         assert isinstance(id1, str)
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_set_correlation_id(self):
         """Test setting correlation ID globally."""
         # Set up logging first
@@ -301,7 +291,6 @@ class TestLoggingDecorator:
     """Test the log_with_correlation decorator."""
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_log_with_correlation_success(self, caplog):
         """Test successful function execution with correlation logging."""
         # Set up logging and ensure it works with pytest's caplog
@@ -321,7 +310,6 @@ class TestLoggingDecorator:
         assert "Completed test_function" in caplog.text
     
     @pytest.mark.unit
-    @pytest.mark.logging
     def test_log_with_correlation_failure(self, caplog):
         """Test function failure with correlation logging."""
         # Set up logging and ensure it works with pytest's caplog
@@ -346,7 +334,6 @@ class TestLoggingIntegration:
     """Integration tests for logging system."""
     
     @pytest.mark.integration
-    @pytest.mark.logging
     def test_logging_with_correlation_id(self, temp_dir, caplog):
         """Test complete logging flow with correlation IDs."""
         log_file = temp_dir / "integration.log"
@@ -397,7 +384,6 @@ class TestLoggingIntegration:
             assert "Test message 3" in log_content
     
     @pytest.mark.integration
-    @pytest.mark.logging
     def test_log_rotation(self, temp_dir):
         """Test log file rotation."""
         log_file = temp_dir / "rotation.log"

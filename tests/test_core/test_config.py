@@ -8,12 +8,15 @@ from pathlib import Path
 from evo.core.config import Config, get_config, set_config
 from evo.core.exceptions import ConfigurationError
 
+pytestmark = [
+    pytest.mark.unit,
+    pytest.mark.core,
+    pytest.mark.config
+]
 
 class TestConfigCreation:
     """Test configuration creation and initialization."""
     
-    @pytest.mark.unit
-    @pytest.mark.config
     def test_default_config_creation(self, mock_env_vars):
         """Test creating a config with default values."""
         config = Config()
@@ -25,8 +28,6 @@ class TestConfigCreation:
         assert config.data.seq_len == 15
         assert config.training.training_steps == 1_000_000
     
-    @pytest.mark.unit
-    @pytest.mark.config
     def test_config_from_file(self, config_from_file, sample_config_data):
         """Test creating a config from a JSON file."""
         config = config_from_file
@@ -37,16 +38,12 @@ class TestConfigCreation:
         assert config.data.seq_len == sample_config_data["data"]["seq_len"]
         assert config.training.learning_rate == sample_config_data["training"]["learning_rate"]
     
-    @pytest.mark.unit
-    @pytest.mark.config
     def test_api_keys_loaded(self, config_with_mock_keys):
         """Test that API keys are loaded from environment."""
         config = config_with_mock_keys
         assert config.alpaca.api_key == "test_api_key"
         assert config.alpaca.api_secret == "test_secret_key"
     
-    @pytest.mark.unit
-    @pytest.mark.config
     def test_config_without_api_keys(self, monkeypatch):
         """Test config creation without API keys."""
         # Clear environment variables
@@ -62,16 +59,12 @@ class TestConfigCreation:
 class TestConfigValidation:
     """Test configuration validation."""
     
-    @pytest.mark.unit
-    @pytest.mark.config
     def test_valid_config_passes_validation(self, config_with_mock_keys):
         """Test that valid config passes validation."""
         config = config_with_mock_keys
         # Should not raise any exception
         assert config is not None
     
-    @pytest.mark.unit
-    @pytest.mark.config
     def test_invalid_trade_qty(self, temp_dir, mock_env_vars):
         """Test validation fails with invalid trade quantity."""
         invalid_config = {
@@ -87,8 +80,6 @@ class TestConfigValidation:
         
         assert "Trade quantity must be positive" in str(exc_info.value)
     
-    @pytest.mark.unit
-    @pytest.mark.config
     def test_invalid_learning_rate(self, temp_dir, mock_env_vars):
         """Test validation fails with invalid learning rate."""
         invalid_config = {
@@ -104,8 +95,6 @@ class TestConfigValidation:
         
         assert "Learning rate must be positive" in str(exc_info.value)
     
-    @pytest.mark.unit
-    @pytest.mark.config
     def test_invalid_mutation_rate(self, temp_dir, mock_env_vars):
         """Test validation fails with invalid mutation rate."""
         invalid_config = {
@@ -121,8 +110,6 @@ class TestConfigValidation:
         
         assert "Mutation rate must be between 0 and 1" in str(exc_info.value)
     
-    @pytest.mark.unit
-    @pytest.mark.config
     def test_live_trading_without_api_keys(self, temp_dir, monkeypatch):
         """Test validation fails for live trading without API keys."""
         # Clear environment variables
@@ -147,6 +134,7 @@ class TestConfigMethods:
     """Test configuration methods."""
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_to_dict(self, config_with_mock_keys):
         """Test converting config to dictionary."""
@@ -165,6 +153,7 @@ class TestConfigMethods:
         assert config_dict["alpaca"]["api_secret"] == "***"
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_save_and_load(self, temp_dir, config_with_mock_keys):
         """Test saving and loading configuration."""
@@ -183,6 +172,7 @@ class TestConfigMethods:
         assert loaded_config.data.seq_len == config.data.seq_len
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_get_model_path(self, config_with_mock_keys):
         """Test getting model path."""
@@ -193,6 +183,7 @@ class TestConfigMethods:
         assert model_path == expected_path
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_get_data_path(self, config_with_mock_keys):
         """Test getting data path."""
@@ -203,6 +194,7 @@ class TestConfigMethods:
         assert data_path == expected_path
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_repr(self, config_with_mock_keys):
         """Test string representation."""
@@ -218,6 +210,7 @@ class TestGlobalConfig:
     """Test global configuration functions."""
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_get_config_singleton(self, mock_env_vars):
         """Test that get_config returns a singleton."""
@@ -227,6 +220,7 @@ class TestGlobalConfig:
         assert config1 is config2
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_set_config(self, mock_env_vars):
         """Test setting global configuration."""
@@ -252,6 +246,7 @@ class TestConfigFileHandling:
     """Test configuration file handling."""
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_nonexistent_config_file(self, mock_env_vars):
         """Test handling of nonexistent config file."""
@@ -262,6 +257,7 @@ class TestConfigFileHandling:
         assert config.trading.symbol == "SPY"
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_invalid_json_file(self, temp_dir, mock_env_vars):
         """Test handling of invalid JSON file."""
@@ -275,6 +271,7 @@ class TestConfigFileHandling:
         assert "Failed to load config file" in str(exc_info.value)
     
     @pytest.mark.unit
+    @pytest.mark.core
     @pytest.mark.config
     def test_partial_config_file(self, temp_dir, mock_env_vars):
         """Test loading partial configuration file."""

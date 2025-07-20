@@ -15,12 +15,15 @@ from evo.utils.helpers import (
     get_memory_usage_mb, log_memory_usage
 )
 
+pytestmark = [
+    pytest.mark.unit,
+    pytest.mark.utils,
+    pytest.mark.helpers
+]
 
 class TestDirectoryHelpers:
     """Test directory-related helper functions."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_ensure_directory_new(self, temp_dir):
         """Test creating a new directory."""
         new_dir = temp_dir / "new_directory"
@@ -30,8 +33,6 @@ class TestDirectoryHelpers:
         assert new_dir.exists()
         assert new_dir.is_dir()
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_ensure_directory_exists(self, temp_dir):
         """Test ensuring directory that already exists."""
         existing_dir = temp_dir / "existing"
@@ -42,8 +43,6 @@ class TestDirectoryHelpers:
         assert result == existing_dir
         assert existing_dir.exists()
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_ensure_directory_nested(self, temp_dir):
         """Test creating nested directories."""
         nested_dir = temp_dir / "parent" / "child" / "grandchild"
@@ -58,57 +57,41 @@ class TestDirectoryHelpers:
 class TestMathHelpers:
     """Test mathematical helper functions."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_safe_divide_normal(self):
         """Test normal division."""
         result = safe_divide(10, 2)
         assert result == 5.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_safe_divide_zero_denominator(self):
         """Test division by zero returns default."""
         result = safe_divide(10, 0)
         assert result == 0.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_safe_divide_custom_default(self):
         """Test division by zero with custom default."""
         result = safe_divide(10, 0, default=42.0)
         assert result == 42.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_safe_divide_float_result(self):
         """Test division resulting in float."""
         result = safe_divide(5, 2)
         assert result == 2.5
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_format_percentage_basic(self):
         """Test basic percentage formatting."""
         result = format_percentage(0.05)
         assert result == "5.00%"
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_format_percentage_custom_decimals(self):
         """Test percentage formatting with custom decimal places."""
         result = format_percentage(0.12345, decimal_places=3)
         assert result == "12.345%"
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_format_percentage_zero(self):
         """Test percentage formatting for zero."""
         result = format_percentage(0.0)
         assert result == "0.00%"
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_format_percentage_negative(self):
         """Test percentage formatting for negative values."""
         result = format_percentage(-0.05)
@@ -118,8 +101,6 @@ class TestMathHelpers:
 class TestDataNormalization:
     """Test data normalization functions."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_normalize_data_zscore(self):
         """Test z-score normalization."""
         data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
@@ -129,8 +110,6 @@ class TestDataNormalization:
         assert np.allclose(np.mean(result, axis=0), 0, atol=1e-10)
         assert np.allclose(np.std(result, axis=0), 1, atol=1e-10)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_normalize_data_minmax(self):
         """Test min-max normalization."""
         data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
@@ -143,8 +122,6 @@ class TestDataNormalization:
         assert np.allclose(np.min(result, axis=0), 0, atol=1e-10)
         assert np.allclose(np.max(result, axis=0), 1, atol=1e-10)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_normalize_data_robust(self):
         """Test robust normalization."""
         data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
@@ -153,8 +130,6 @@ class TestDataNormalization:
         # Check that result has median close to 0
         assert np.allclose(np.median(result, axis=0), 0, atol=1e-10)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_normalize_data_invalid_method(self):
         """Test normalization with invalid method."""
         data = np.array([[1, 2, 3]])
@@ -162,8 +137,6 @@ class TestDataNormalization:
             normalize_data(data, method="invalid")
         assert "Unknown normalization method" in str(exc_info.value)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_normalize_data_constant_column(self):
         """Test normalization with constant column (zero std)."""
         data = np.array([[1, 2, 5], [1, 3, 6], [1, 4, 7]])  # First column is constant
@@ -177,8 +150,6 @@ class TestDataNormalization:
 class TestFinancialCalculations:
     """Test financial calculation functions."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_returns_basic(self):
         """Test basic return calculation."""
         prices = np.array([100, 110, 105, 115])
@@ -187,8 +158,6 @@ class TestFinancialCalculations:
         expected = np.array([0.1, -0.04545, 0.09524])  # Manual calculation
         assert np.allclose(returns, expected, atol=1e-4)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_returns_single_price(self):
         """Test return calculation with single price."""
         prices = np.array([100])
@@ -196,8 +165,6 @@ class TestFinancialCalculations:
         
         assert len(returns) == 0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_returns_empty(self):
         """Test return calculation with empty array."""
         prices = np.array([])
@@ -205,8 +172,6 @@ class TestFinancialCalculations:
         
         assert len(returns) == 0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_sharpe_ratio_basic(self):
         """Test basic Sharpe ratio calculation."""
         returns = np.array([0.01, 0.02, -0.01, 0.03, 0.01])
@@ -217,8 +182,6 @@ class TestFinancialCalculations:
         assert not np.isnan(sharpe)
         assert not np.isinf(sharpe)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_sharpe_ratio_zero_returns(self):
         """Test Sharpe ratio with zero returns."""
         returns = np.array([0.0, 0.0, 0.0])
@@ -226,8 +189,6 @@ class TestFinancialCalculations:
         
         assert sharpe == 0.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_sharpe_ratio_empty(self):
         """Test Sharpe ratio with empty returns."""
         returns = np.array([])
@@ -235,8 +196,6 @@ class TestFinancialCalculations:
         
         assert sharpe == 0.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_sharpe_ratio_with_risk_free_rate(self):
         """Test Sharpe ratio with risk-free rate."""
         returns = np.array([0.01, 0.02, -0.01, 0.03, 0.01])
@@ -246,8 +205,6 @@ class TestFinancialCalculations:
         sharpe_no_rf = calculate_sharpe_ratio(returns, risk_free_rate=0.0)
         assert sharpe < sharpe_no_rf
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_max_drawdown_basic(self):
         """Test basic maximum drawdown calculation."""
         equity_curve = np.array([100, 110, 105, 115, 108, 120])
@@ -257,8 +214,6 @@ class TestFinancialCalculations:
         expected = 0.0609
         assert abs(max_dd - expected) < 0.001
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_max_drawdown_always_rising(self):
         """Test max drawdown with always rising equity curve."""
         equity_curve = np.array([100, 110, 120, 130, 140])
@@ -266,8 +221,6 @@ class TestFinancialCalculations:
         
         assert max_dd == 0.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_max_drawdown_single_value(self):
         """Test max drawdown with single value."""
         equity_curve = np.array([100])
@@ -275,8 +228,6 @@ class TestFinancialCalculations:
         
         assert max_dd == 0.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_win_rate_basic(self):
         """Test basic win rate calculation."""
         trades = [
@@ -289,9 +240,7 @@ class TestFinancialCalculations:
         win_rate = calculate_win_rate(trades)
         
         assert win_rate == 0.6  # 3 wins out of 5 trades
-    
-    @pytest.mark.unit
-    @pytest.mark.utils
+
     def test_calculate_win_rate_all_wins(self):
         """Test win rate with all winning trades."""
         trades = [{'pnl': 100}, {'pnl': 200}, {'pnl': 150}]
@@ -299,8 +248,6 @@ class TestFinancialCalculations:
         
         assert win_rate == 1.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_win_rate_all_losses(self):
         """Test win rate with all losing trades."""
         trades = [{'pnl': -100}, {'pnl': -200}, {'pnl': -150}]
@@ -308,8 +255,6 @@ class TestFinancialCalculations:
         
         assert win_rate == 0.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_win_rate_empty(self):
         """Test win rate with empty trades list."""
         trades = []
@@ -317,8 +262,6 @@ class TestFinancialCalculations:
         
         assert win_rate == 0.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_win_rate_missing_pnl(self):
         """Test win rate with trades missing pnl key."""
         trades = [{'pnl': 100}, {}, {'pnl': -50}]
@@ -334,8 +277,6 @@ class TestFinancialCalculations:
 class TestDataProcessing:
     """Test data processing helper functions."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_clean_dataframe_basic(self):
         """Test basic DataFrame cleaning."""
         df = pd.DataFrame({
@@ -351,8 +292,6 @@ class TestDataProcessing:
         assert not result.duplicated().any()
         assert not result.isna().any().any()
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_clean_dataframe_no_duplicates(self):
         """Test DataFrame cleaning without dropping duplicates."""
         df = pd.DataFrame({
@@ -365,8 +304,6 @@ class TestDataProcessing:
         # Should keep duplicates
         assert len(result) == len(df)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_create_sliding_windows_basic(self):
         """Test basic sliding window creation."""
         data = np.array([1, 2, 3, 4, 5, 6])
@@ -380,8 +317,6 @@ class TestDataProcessing:
         ])
         assert np.array_equal(windows, expected)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_create_sliding_windows_step_2(self):
         """Test sliding windows with step=2."""
         data = np.array([1, 2, 3, 4, 5, 6])
@@ -393,8 +328,6 @@ class TestDataProcessing:
         ])
         assert np.array_equal(windows, expected)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_create_sliding_windows_2d(self):
         """Test sliding windows with 2D data."""
         data = np.array([[1, 10], [2, 20], [3, 30], [4, 40]])
@@ -407,8 +340,6 @@ class TestDataProcessing:
         ])
         assert np.array_equal(windows, expected)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_calculate_technical_indicators_basic(self):
         """Test basic technical indicator calculation."""
         df = pd.DataFrame({
@@ -429,8 +360,6 @@ class TestDataProcessing:
 class TestUtilityFunctions:
     """Test utility helper functions."""
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_format_timestamp_string(self):
         """Test timestamp formatting from string."""
         timestamp_str = "2023-01-15 14:30:00"
@@ -438,8 +367,6 @@ class TestUtilityFunctions:
         
         assert result == "2023-01-15 14:30:00"
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_format_timestamp_pandas(self):
         """Test timestamp formatting from pandas Timestamp."""
         timestamp = pd.Timestamp("2023-01-15 14:30:00")
@@ -447,8 +374,6 @@ class TestUtilityFunctions:
         
         assert result == "2023-01-15 14:30:00"
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_get_file_size_mb(self, temp_dir):
         """Test getting file size in MB."""
         # Create a test file
@@ -461,8 +386,6 @@ class TestUtilityFunctions:
         assert size_mb > 0
         assert size_mb < 1  # Should be less than 1 MB
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_get_file_size_mb_nonexistent(self):
         """Test getting file size for nonexistent file."""
         nonexistent_file = Path("nonexistent_file.txt")
@@ -470,8 +393,6 @@ class TestUtilityFunctions:
         with pytest.raises(FileNotFoundError):
             get_file_size_mb(nonexistent_file)
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     def test_get_memory_usage_mb(self):
         """Test getting memory usage in MB."""
         # Since psutil is imported inside the function, we need to patch it at the import level
@@ -498,8 +419,6 @@ class TestUtilityFunctions:
             
             assert memory_mb == 100.0
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     @patch('evo.utils.helpers.get_memory_usage_mb')
     @patch('evo.utils.helpers.get_logger')
     def test_log_memory_usage(self, mock_get_logger, mock_get_memory):
@@ -514,8 +433,6 @@ class TestUtilityFunctions:
         call_args = mock_logger.info.call_args[0][0]
         assert "150.5 MB" in call_args
     
-    @pytest.mark.unit
-    @pytest.mark.utils
     @patch('evo.utils.helpers.get_memory_usage_mb')
     def test_log_memory_usage_custom_logger(self, mock_get_memory):
         """Test memory usage logging with custom logger."""
