@@ -115,22 +115,38 @@ def timeout(seconds: float):
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            import signal
+            import threading
+            import queue
             
-            def timeout_handler(signum, frame):
-                raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
+            result_queue = queue.Queue()
+            exception_queue = queue.Queue()
             
-            # Set up signal handler
-            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(int(seconds))
+            def target():
+                try:
+                    result = func(*args, **kwargs)
+                    result_queue.put(result)
+                except Exception as e:
+                    exception_queue.put(e)
+            
+            thread = threading.Thread(target=target)
+            thread.daemon = True
+            thread.start()
             
             try:
-                result = func(*args, **kwargs)
+                # Wait for result with timeout
+                result = result_queue.get(timeout=seconds)
                 return result
-            finally:
-                # Restore signal handler
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, old_handler)
+            except queue.Empty:
+                # Timeout occurred
+                raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds")
+            except Exception as e:
+                # Check if there was an exception in the thread
+                try:
+                    thread_exception = exception_queue.get_nowait()
+                    raise thread_exception
+                except queue.Empty:
+                    # No exception in thread, re-raise the original exception
+                    raise e
         
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
@@ -219,7 +235,7 @@ def log_execution_time(logger: Optional[logging.Logger] = None):
             try:
                 result = func(*args, **kwargs)
                 execution_time = time.time() - start_time
-                logger_instance.debug(
+                logger_instance.info(
                     f"{func.__name__} completed in {execution_time:.4f}s"
                 )
                 return result
@@ -241,7 +257,7 @@ def log_execution_time(logger: Optional[logging.Logger] = None):
             try:
                 result = await func(*args, **kwargs)
                 execution_time = time.time() - start_time
-                logger_instance.debug(
+                logger_instance.info(
                     f"{func.__name__} completed in {execution_time:.4f}s"
                 )
                 return result
@@ -277,7 +293,16 @@ def validate_inputs(*validators: Callable):
             # Apply validators to arguments
             for i, validator in enumerate(validators):
                 if i < len(args):
-                    validator(args[i])
+                    try:
+                        result = validator(args[i])
+                        # If validator returns False, raise ValueError
+                        if result is False:
+                            raise ValueError(f"Input validation failed for argument {i}: {args[i]}")
+                    except Exception as e:
+                        # Re-raise any exceptions from validators
+                        if isinstance(e, ValueError):
+                            raise
+                        raise ValueError(f"Input validation failed for argument {i}: {str(e)}")
             
             return func(*args, **kwargs)
         
