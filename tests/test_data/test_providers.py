@@ -8,6 +8,7 @@ import pytest
 import pandas as pd
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
+from types import SimpleNamespace
 
 from evo.data.providers.base_provider import BaseDataProvider
 from evo.data.providers.alpaca_provider import AlpacaDataProvider
@@ -34,11 +35,13 @@ class TestAlpacaDataProvider:
     @pytest.fixture
     def mock_config(self):
         """Create a mock configuration for testing."""
-        return {
-            "api_key": "test_key",
-            "api_secret": "test_secret",
-            "paper": True
-        }
+        return SimpleNamespace(
+            alpaca=SimpleNamespace(
+                api_key="test_key",
+                api_secret="test_secret",
+                paper=True
+            )
+        )
     
     @pytest.fixture
     def provider(self, mock_config):
@@ -68,19 +71,19 @@ class TestAlpacaDataProvider:
     
     def test_init_missing_api_key(self):
         """Test initialization with missing API key."""
-        config = {"api_secret": "test_secret"}
+        config = SimpleNamespace(alpaca=SimpleNamespace(api_secret="test_secret"))
         with pytest.raises(DataProviderError, match="Missing required config key: api_key"):
             AlpacaDataProvider(config)
     
     def test_init_missing_api_secret(self):
         """Test initialization with missing API secret."""
-        config = {"api_key": "test_key"}
+        config = SimpleNamespace(alpaca=SimpleNamespace(api_key="test_key"))
         with pytest.raises(DataProviderError, match="Missing required config key: api_secret"):
             AlpacaDataProvider(config)
     
     def test_init_empty_credentials(self):
         """Test initialization with empty credentials."""
-        config = {"api_key": "", "api_secret": ""}
+        config = SimpleNamespace(alpaca=SimpleNamespace(api_key="", api_secret=""))
         with pytest.raises(DataProviderError, match="API key and secret cannot be empty"):
             AlpacaDataProvider(config)
     

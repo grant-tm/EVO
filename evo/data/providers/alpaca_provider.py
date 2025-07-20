@@ -62,10 +62,9 @@ class AlpacaDataProvider(BaseDataProvider):
         """Validate Alpaca configuration."""
         required_keys = ["api_key", "api_secret"]
         for key in required_keys:
-            if key not in self.config:
+            if not hasattr(self.config.alpaca, key):
                 raise DataProviderError(f"Missing required config key: {key}")
-        
-        if not self.config["api_key"] or not self.config["api_secret"]:
+        if not self.config.alpaca.api_key or not self.config.alpaca.api_secret:
             raise DataProviderError("API key and secret cannot be empty")
     
     @property
@@ -73,9 +72,9 @@ class AlpacaDataProvider(BaseDataProvider):
         """Get or create historical data client."""
         if self._historical_client is None:
             self._historical_client = StockHistoricalDataClient(
-                api_key=self.config["api_key"],
-                secret_key=self.config["api_secret"],
-                url_override=self.config.get("base_url")
+                api_key=self.config.alpaca.api_key,
+                secret_key=self.config.alpaca.api_secret,
+                url_override=getattr(self.config.alpaca, "base_url", None)
             )
         return self._historical_client
     
@@ -84,9 +83,9 @@ class AlpacaDataProvider(BaseDataProvider):
         """Get or create streaming data client."""
         if self._stream_client is None:
             self._stream_client = StockDataStream(
-                api_key=self.config["api_key"],
-                secret_key=self.config["api_secret"],
-                url_override=self.config.get("base_url")
+                api_key=self.config.alpaca.api_key,
+                secret_key=self.config.alpaca.api_secret,
+                url_override=getattr(self.config.alpaca, "base_url", None)
             )
         return self._stream_client
     
@@ -95,10 +94,10 @@ class AlpacaDataProvider(BaseDataProvider):
         """Get or create trading client."""
         if self._trading_client is None:
             self._trading_client = TradingClient(
-                api_key=self.config["api_key"],
-                secret_key=self.config["api_secret"],
-                paper=self.config.get("paper", True),
-                url_override=self.config.get("base_url")
+                api_key=self.config.alpaca.api_key,
+                secret_key=self.config.alpaca.api_secret,
+                paper=getattr(self.config.alpaca, "paper", True),
+                url_override=getattr(self.config.alpaca, "base_url", None)
             )
         return self._trading_client
     

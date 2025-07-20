@@ -24,6 +24,10 @@ class TradingConfig:
     trade_qty: int = 1
     use_simulation: bool = True
     sim_speed: float = 0.8
+    initial_capital: float = 100000.0
+    commission: float = 0.001  # 0.1% commission
+    update_interval: int = 30  # seconds between updates
+    close_positions_on_stop: bool = True
 
 
 @dataclass
@@ -88,6 +92,37 @@ class AlpacaConfig:
     paper_trading: bool = True
 
 
+@dataclass
+class ExecutionConfig:
+    """Configuration for execution layer."""
+    risk_limits: Dict[str, Any] = field(default_factory=lambda: {
+        'max_position_size': 0.1,
+        'max_portfolio_exposure': 0.5,
+        'max_drawdown': 0.15,
+        'max_daily_loss': 0.05,
+        'max_orders_per_day': 50,
+        'min_order_size': 100.0,
+        'max_order_size': 10000.0
+    })
+    position_config: Dict[str, Any] = field(default_factory=lambda: {
+        'default_stop_loss_pct': 0.02,
+        'default_take_profit_pct': 0.04,
+        'trailing_stop_pct': 0.01,
+        'max_positions': 10,
+        'position_sizing_method': 'kelly',
+        'kelly_fraction': 0.25
+    })
+    monitoring: Dict[str, Any] = field(default_factory=lambda: {
+        'monitor_interval': 30,
+        'alert_thresholds': {
+            'max_drawdown': 0.15,
+            'daily_loss': 0.05,
+            'position_size': 0.2,
+            'data_latency': 30
+        }
+    })
+
+
 class Config:
     """
     Main configuration class for the EVO trading system.
@@ -119,6 +154,7 @@ class Config:
         self.reward = RewardConfig()
         self.optimization = OptimizationConfig()
         self.alpaca = AlpacaConfig()
+        self.execution = ExecutionConfig()
         
         # Load from config file if provided
         if config_file and config_file.exists():
@@ -132,6 +168,27 @@ class Config:
         
         self.logger.info("Configuration loaded successfully")
     
+    def __getitem__(self, key):
+        """Allow dict-style access to configuration sections."""
+        # Get the attribute by name
+        try:
+            attr = getattr(self, key)
+        except AttributeError:
+            raise KeyError(key)
+        
+        # If the attribute is a Config, allow further dict-style access
+        if isinstance(attr, Config):
+            return attr
+        
+        return attr
+
+    def __setitem__(self, key, value):
+        """Allow dict-style assignment to configuration sections."""
+        if hasattr(self, key):
+            setattr(self, key, value)
+        else:
+            raise KeyError(key)
+
     def _load_from_file(self, config_file: Path):
         """Load configuration from JSON file."""
         try:
@@ -221,7 +278,8 @@ class Config:
                 "api_key": "***" if self.alpaca.api_key else None,
                 "api_secret": "***" if self.alpaca.api_secret else None,
                 "paper_trading": self.alpaca.paper_trading
-            }
+            },
+            "execution": self.execution.__dict__
         }
     
     def save(self, config_file: Path):
