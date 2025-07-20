@@ -9,9 +9,14 @@ import pytest
 import tempfile
 import shutil
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Generator
 import pandas as pd
 import numpy as np
+from unittest.mock import patch, MagicMock
+import tempfile
+import os
+from evo.core.config import get_config, set_config
+from evo.core.exceptions import DataError
 
 # Add the project root to Python path
 import sys
@@ -117,6 +122,38 @@ def mock_env_vars(monkeypatch):
     """Mock environment variables for testing."""
     monkeypatch.setenv("ALPACA_API_KEY", "test_api_key")
     monkeypatch.setenv("ALPACA_SECRET_KEY", "test_secret_key")
+    monkeypatch.setenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+
+
+@pytest.fixture
+def temp_config_dir():
+    """Create a temporary directory for test configuration files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
+@pytest.fixture
+def temp_model_dir():
+    """Create a temporary directory for test model files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
+@pytest.fixture
+def temp_data_dir():
+    """Create a temporary directory for test data files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
+@pytest.fixture
+def patch_logging():
+    """Patch logging setup to avoid file creation during tests."""
+    with patch('evo.core.logging.setup_logging') as mock_setup:
+        with patch('evo.core.logging.get_logger') as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+            yield mock_setup, mock_get_logger, mock_logger
 
 
 @pytest.fixture
@@ -129,7 +166,7 @@ def config_with_mock_keys(mock_env_vars):
 def config_from_file(config_file, mock_env_vars):
     """Create a config instance from a test file."""
     return Config(config_file=config_file)
-
+    
 
 # Test markers for organizing tests
 def pytest_configure(config):
@@ -154,4 +191,13 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers", "utils: mark test as testing utilities"
+    )
+    config.addinivalue_line(
+        "markers", "optimization: mark test as testing optimization module"
+    )
+    config.addinivalue_line(
+        "markers", "backtesting: mark test as testing backtesting framework"
+    )
+    config.addinivalue_line(
+        "markers", "genetic: mark test as testing genetic optimization"
     ) 
