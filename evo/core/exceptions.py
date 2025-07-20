@@ -31,6 +31,11 @@ class DataError(EVOException):
     pass
 
 
+class DataProviderError(DataError):
+    """Raised when there are issues with data providers."""
+    pass
+
+
 class TrainingError(EVOException):
     """Raised when there are issues during model training."""
     pass
