@@ -1,11 +1,14 @@
-.env
+# Files / filetypes to ignore
+*.env
 *.zip
 *.csv
 *.pkl
 *.keras
+*.coverage
+
+# Directories to ignore
 **/__pycache__/
 trained_models/*
 checkpoints/*
 logs/*
 ppo_tensorboard/*
-.coverage
