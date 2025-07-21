@@ -93,34 +93,72 @@ class AlpacaConfig:
 
 
 @dataclass
+class BrokerConfig:
+    """Configuration for broker connections."""
+    # Alpaca-specific configuration
+    alpaca: AlpacaConfig = field(default_factory=AlpacaConfig)
+    
+    # Generic broker settings
+    connection_timeout: int = 30
+    request_timeout: int = 60
+    max_retries: int = 3
+    retry_delay: float = 1.0
+    
+    # Rate limiting
+    requests_per_second: int = 10
+    burst_limit: int = 50
+    
+    # Logging
+    log_orders: bool = True
+    log_positions: bool = True
+    log_account: bool = True
+
+
+@dataclass
+class RiskLimitsConfig:
+    """Configuration for risk management limits."""
+    max_position_size: float = 0.1  # Max 10% of portfolio per position
+    max_portfolio_exposure: float = 0.5  # Max 50% of portfolio in positions
+    max_drawdown: float = 0.15  # Max 15% drawdown
+    max_daily_loss: float = 0.05  # Max 5% daily loss
+    max_correlation_exposure: float = 0.3  # Max 30% in correlated assets
+    stop_loss_pct: float = 0.02  # 2% stop loss per position
+    take_profit_pct: float = 0.04  # 4% take profit per position
+    max_orders_per_day: int = 50  # Max 50 orders per day
+    min_order_size: float = 100.0  # Minimum order size in USD
+    max_order_size: float = 10000.0  # Maximum order size in USD
+
+
+@dataclass
+class PositionConfig:
+    """Configuration for position management."""
+    default_stop_loss_pct: float = 0.02  # 2% stop loss
+    default_take_profit_pct: float = 0.04  # 4% take profit
+    trailing_stop_pct: float = 0.01  # 1% trailing stop
+    max_positions: int = 10  # Maximum number of concurrent positions
+    position_sizing_method: str = "kelly"  # kelly, fixed, volatility
+    kelly_fraction: float = 0.25  # Fraction of Kelly criterion to use
+    volatility_lookback: int = 20  # Days for volatility calculation
+
+
+@dataclass
+class MonitoringConfig:
+    """Configuration for monitoring and alerts."""
+    monitor_interval: int = 30  # seconds between monitoring updates
+    alert_thresholds: Dict[str, float] = field(default_factory=lambda: {
+        'max_drawdown': 0.15,
+        'daily_loss': 0.05,
+        'position_size': 0.2,
+        'data_latency': 30
+    })
+
+
+@dataclass
 class ExecutionConfig:
     """Configuration for execution layer."""
-    risk_limits: Dict[str, Any] = field(default_factory=lambda: {
-        'max_position_size': 0.1,
-        'max_portfolio_exposure': 0.5,
-        'max_drawdown': 0.15,
-        'max_daily_loss': 0.05,
-        'max_orders_per_day': 50,
-        'min_order_size': 100.0,
-        'max_order_size': 10000.0
-    })
-    position_config: Dict[str, Any] = field(default_factory=lambda: {
-        'default_stop_loss_pct': 0.02,
-        'default_take_profit_pct': 0.04,
-        'trailing_stop_pct': 0.01,
-        'max_positions': 10,
-        'position_sizing_method': 'kelly',
-        'kelly_fraction': 0.25
-    })
-    monitoring: Dict[str, Any] = field(default_factory=lambda: {
-        'monitor_interval': 30,
-        'alert_thresholds': {
-            'max_drawdown': 0.15,
-            'daily_loss': 0.05,
-            'position_size': 0.2,
-            'data_latency': 30
-        }
-    })
+    risk_limits: RiskLimitsConfig = field(default_factory=RiskLimitsConfig)
+    position_config: PositionConfig = field(default_factory=PositionConfig)
+    monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
 
 
 class Config:
@@ -154,6 +192,7 @@ class Config:
         self.reward = RewardConfig()
         self.optimization = OptimizationConfig()
         self.alpaca = AlpacaConfig()
+        self.broker = BrokerConfig()
         self.execution = ExecutionConfig()
         
         # Load from config file if provided
@@ -199,21 +238,35 @@ class Config:
             for section_name, section_data in config_data.items():
                 if hasattr(self, section_name):
                     section = getattr(self, section_name)
-                    for key, value in section_data.items():
-                        if hasattr(section, key):
-                            setattr(section, key, value)
+                    self._update_section(section, section_data)
             
             self.logger.info(f"Loaded configuration from {config_file}")
         except Exception as e:
             raise ConfigurationError(f"Failed to load config file {config_file}: {str(e)}")
+    
+    def _update_section(self, section, section_data):
+        """Recursively update a configuration section."""
+        for key, value in section_data.items():
+            if hasattr(section, key):
+                current_value = getattr(section, key)
+                
+                # If the current value is a dataclass and the new value is a dict,
+                # recursively update the dataclass
+                if hasattr(current_value, '__dataclass_fields__') and isinstance(value, dict):
+                    self._update_section(current_value, value)
+                else:
+                    # Otherwise, set the value directly
+                    setattr(section, key, value)
     
     def _load_api_keys(self):
         """Load API keys from environment variables."""
         # Load Alpaca API keys from environment
         if os.getenv("ALPACA_API_KEY"):
             self.alpaca.api_key = os.getenv("ALPACA_API_KEY")
+            self.broker.alpaca.api_key = os.getenv("ALPACA_API_KEY")
         if os.getenv("ALPACA_SECRET_KEY"):
             self.alpaca.api_secret = os.getenv("ALPACA_SECRET_KEY")
+            self.broker.alpaca.api_secret = os.getenv("ALPACA_SECRET_KEY")
         
         self.logger.debug("API keys loaded from environment variables")
     
@@ -278,6 +331,22 @@ class Config:
                 "api_key": "***" if self.alpaca.api_key else None,
                 "api_secret": "***" if self.alpaca.api_secret else None,
                 "paper_trading": self.alpaca.paper_trading
+            },
+            "broker": {
+                "alpaca": {
+                    "api_key": "***" if self.broker.alpaca.api_key else None,
+                    "api_secret": "***" if self.broker.alpaca.api_secret else None,
+                    "paper_trading": self.broker.alpaca.paper_trading
+                },
+                "connection_timeout": self.broker.connection_timeout,
+                "request_timeout": self.broker.request_timeout,
+                "max_retries": self.broker.max_retries,
+                "retry_delay": self.broker.retry_delay,
+                "requests_per_second": self.broker.requests_per_second,
+                "burst_limit": self.broker.burst_limit,
+                "log_orders": self.broker.log_orders,
+                "log_positions": self.broker.log_positions,
+                "log_account": self.broker.log_account
             },
             "execution": self.execution.__dict__
         }
