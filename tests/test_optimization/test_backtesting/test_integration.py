@@ -33,7 +33,7 @@ def sample_market_data_file(temp_dir):
     dates = pd.date_range('2023-01-01', periods=100, freq='D')
     
     # Generate price data with some trend and volatility
-    np.random.seed(42)  # For reproducible tests
+    np.random.seed(42)
     base_price = 100.0
     prices = [base_price]
     
