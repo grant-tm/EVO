@@ -200,4 +200,16 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers", "genetic: mark test as testing genetic optimization"
-    ) 
+    )
+    config.addinivalue_line(
+        "markers", "models: mark test as testing models module"
+    )
+    config.addinivalue_line(
+        "markers", "agents: mark test as testing trading agents"
+    )
+    config.addinivalue_line(
+        "markers", "environments: mark test as testing trading environments"
+    )
+    config.addinivalue_line(
+        "markers", "training: mark test as testing training components"
+    )
