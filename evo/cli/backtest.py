@@ -387,7 +387,7 @@ Examples:
     # Subparsers for strategies
     subparsers = parser.add_subparsers(dest='strategy', required=True, title='Strategies', description='Available trading strategies')
 
-    # Moving Average
+    # -- Moving Average -----------------------------------
     ma_parser = subparsers.add_parser(
         'moving_average', 
         help='Moving Average Crossover strategy'
@@ -405,7 +405,7 @@ Examples:
         help='Long window for moving average'
     )
 
-    # Mean Reversion
+    # -- Mean Reversion -----------------------------------
     mr_parser = subparsers.add_parser('mean_reversion', help='Mean Reversion (Bollinger Bands) strategy')
     mr_parser.add_argument(
         '--window', 
@@ -420,7 +420,7 @@ Examples:
         help='Standard deviation threshold for mean reversion'
     )
 
-    # Momentum
+    # -- Momentum -----------------------------------------
     mom_parser = subparsers.add_parser('momentum', help='Momentum strategy')
     mom_parser.add_argument(
         '--lookback-period', 
@@ -435,7 +435,7 @@ Examples:
         help='Momentum threshold for momentum strategy'
     )
 
-    # PPO
+    # -- PPO ----------------------------------------------
     ppo_parser = subparsers.add_parser('ppo', help='PPO RL model strategy')
     ppo_parser.add_argument(
         '--model-path', 
@@ -444,7 +444,7 @@ Examples:
         help='Path to trained PPO model'
     )
 
-    # Random
+    # -- Random -------------------------------------------
     rand_parser = subparsers.add_parser(
         'random', 
         help='Random trading strategy (for testing/comparison)')
