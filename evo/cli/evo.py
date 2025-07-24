@@ -9,9 +9,9 @@ def clean_command(args):
     def prompt_confirm():
         warning = (
             "WARNING: This will permanently delete the following:\n"
-            "- checkpoints/\n- logs/\n- trained_models/\n- all .csv files in the project\n- all __pycache__ directories\n\nContinue? [y/N]: "
+            "- checkpoints/\n- logs/\n- trained_models/\n- all .csv files in the project\n- all __pycache__ directories\n\nContinue? [Y/n]: "
         )
-        return input(warning).strip().lower() == 'y'
+        return input(warning).strip() == 'Y'
 
     def remove_path(path):
         if os.path.isdir(path):
@@ -40,7 +40,7 @@ def clean_command(args):
                     remove_path(pycache_path)
         print("Clean complete.")
     else:
-        print("Aborted.")
+        print("Clean Aborted.")
         sys.exit(1)
 
 def main():
@@ -61,6 +61,10 @@ def main():
     # Backtest subcommand
     backtest_parser = subparsers.add_parser("backtest", help="Backtesting CLI")
     backtest_parser.add_argument('args', nargs=argparse.REMAINDER)
+
+    # Genetic subcommand
+    genetic_parser = subparsers.add_parser("genetic", help="Genetic optimization CLI")
+    genetic_parser.add_argument('args', nargs=argparse.REMAINDER)
 
     # Clean subcommand
     clean_parser = subparsers.add_parser("clean", help="Remove temporary/generated files (checkpoints, logs, trained_models, CSVs, pycaches)")
