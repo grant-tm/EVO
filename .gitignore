@@ -12,3 +12,4 @@ trained_models/*
 checkpoints/*
 logs/*
 ppo_tensorboard/*
+tensorboard_logs/*
