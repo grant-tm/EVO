@@ -26,8 +26,8 @@ def _load_config(parsed_args: argparse.Namespace) -> Config:
     config = get_config()
     if parsed_args.config:
         config = Config(config_file=parsed_args.config, env_file=parsed_args.env_file)
-    if parsed_args.data_path:
-        config.data.data_path = str(parsed_args.data_path)
+    if parsed_args.input:
+        config.data.data_path = str(parsed_args.input)
     if parsed_args.features:
         config.data.features = parsed_args.features.split(',')
     if parsed_args.initial_capital:
@@ -187,6 +187,64 @@ def _log_comparison(results: dict, logger: Any) -> None:
     logger.info({"event": "strategy_comparison", "results": comparison})
 
 
+def extract_strategy_parameters(args: argparse.Namespace) -> dict:
+    strategy_params = {}
+    
+    if args.strategy == 'moving_average':
+        strategy_params['short_window'] = args.short_window
+        strategy_params['long_window'] = args.long_window
+    
+    elif args.strategy == 'mean_reversion':
+        strategy_params['window'] = args.window
+        strategy_params['std_dev'] = args.std_dev
+    
+    elif args.strategy == 'momentum':
+        strategy_params['lookback_period'] = args.lookback_period
+        strategy_params['momentum_threshold'] = args.momentum_threshold
+    
+    elif args.strategy == 'ppo':
+        strategy_params['model'] = args.model_path
+
+
+def run_cross_validation(parsed_args, strategy, strategy_params, backtest_engine, output_dir, logger):
+    """
+    Run cross-validation for the given strategy.
+    """
+    logger.info(f"Running cross-validation for {strategy} strategy")
+    cv_engine = CrossValidationEngine(backtest_engine)
+    cv_results = cv_engine.run_time_series_cv(
+        strategy=strategy,
+        n_splits=parsed_args.n_splits,
+        test_size=parsed_args.test_size,
+        **strategy_params
+    )
+    if cv_results:
+        logger.info(f"Cross-validation completed with {len(cv_results)} folds")
+        _save_cv_results(cv_results, strategy, strategy_params, parsed_args, output_dir, logger)
+
+
+def run_single_backtest(parsed_args, strategy, strategy_params, backtest_engine, output_dir, logger, results):
+    """
+    Run a single backtest for the given strategy.
+    """
+    logger.info(f"Testing {strategy} strategy...")
+    try:
+        result = backtest_engine.run_backtest(
+            strategy=strategy,
+            length=parsed_args.length or 1000,
+            **strategy_params
+        )
+        results[strategy] = result
+        _log_single_result(result, logger)
+        if parsed_args.save_results:
+            _save_backtest_result(result, strategy, strategy_params, parsed_args, output_dir, logger)
+    except Exception as e:
+        logger.error(f"Error testing {strategy}: {e}")
+        results[strategy] = None
+    if parsed_args.compare and len(results) > 1:
+        _log_comparison(results, logger)
+
+
 def backtest_command(args: Optional[list] = None) -> None:
     """
     Run backtesting on trading strategies.
@@ -232,13 +290,15 @@ Examples:
     # -- Data Parameters ----------------------------------
     data_group = parser.add_argument_group('Data Parameters')
     data_group.add_argument(
-        '--data-path', 
+        '--input', 
         type=Path, 
-        help='Path to data file for backtesting'
+        required=True,
+        help='Path to CSV file with data to backtest on'
     )
     data_group.add_argument(
         '--features', 
         type=str, 
+        default='open,high,low,close,volume',
         help='Comma-separated list of features to use'
     )
 
@@ -252,16 +312,19 @@ Examples:
     backtest_group.add_argument(
         '--initial-capital',
         type=float, 
+        default=100000.0,
         help='Initial capital for backtesting'
     )
     backtest_group.add_argument(
         '--commission',
         type=float, 
+        default=0.0,
         help='Commission rate for backtesting'
     )
     backtest_group.add_argument(
         '--slippage',
         type=float, 
+        default=0.0,
         help='Slippage rate for backtesting'
     )
 
@@ -290,6 +353,7 @@ Examples:
     output_group.add_argument(
         '--compare', 
         action='store_true', 
+        default=False,
         help='Compare multiple strategies side by side'
     )
     output_group.add_argument(
@@ -395,14 +459,18 @@ Examples:
         config = _load_config(parsed_args)
         logger.info("Starting backtesting")
         logger.info(f"Configuration: {config}")
+        
         # Create output directory
         output_dir = parsed_args.output_dir
         output_dir.mkdir(parents=True, exist_ok=True)
-        # Setup backtesting environment
+        
+        # Setup data provider
         data_provider = CSVDataProvider(
             data_path=config.data.data_path,
             feature_columns=config.data.features
         )
+        
+        # Setup backtesting engine
         backtest_engine = BacktestEngine(
             data_provider=data_provider,
             initial_capital=config.trading.initial_capital,
@@ -410,50 +478,17 @@ Examples:
             slippage=getattr(config.trading, 'slippage', 0.0),
             risk_free_rate=0.02
         )
+        
         # Strategy-specific parameter extraction
         strategy = parsed_args.strategy
-        strategy_params = {}
-        if strategy == 'moving_average':
-            strategy_params['short_window'] = parsed_args.short_window
-            strategy_params['long_window'] = parsed_args.long_window
-        elif strategy == 'mean_reversion':
-            strategy_params['window'] = parsed_args.window
-            strategy_params['std_dev'] = parsed_args.std_dev
-        elif strategy == 'momentum':
-            strategy_params['lookback_period'] = parsed_args.lookback_period
-            strategy_params['momentum_threshold'] = parsed_args.momentum_threshold
-        elif strategy == 'ppo':
-            strategy_params['model'] = parsed_args.model_path
+        strategy_params = extract_strategy_parameters(parsed_args)
         results = {}
+
+        # Run cross-validation or single backtest
         if getattr(parsed_args, 'cv', False):
-            logger.info(f"Running cross-validation for {strategy} strategy")
-            cv_engine = CrossValidationEngine(backtest_engine)
-            cv_results = cv_engine.run_time_series_cv(
-                strategy=strategy,
-                n_splits=parsed_args.n_splits,
-                test_size=parsed_args.test_size,
-                **strategy_params
-            )
-            if cv_results:
-                logger.info(f"Cross-validation completed with {len(cv_results)} folds")
-                _save_cv_results(cv_results, strategy, strategy_params, parsed_args, output_dir, logger)
+            run_cross_validation(parsed_args, strategy, strategy_params, backtest_engine, output_dir, logger)
         else:
-            logger.info(f"Testing {strategy} strategy...")
-            try:
-                result = backtest_engine.run_backtest(
-                    strategy=strategy,
-                    length=parsed_args.length or 1000,
-                    **strategy_params
-                )
-                results[strategy] = result
-                _log_single_result(result, logger)
-                if parsed_args.save_results:
-                    _save_backtest_result(result, strategy, strategy_params, parsed_args, output_dir, logger)
-            except Exception as e:
-                logger.error(f"Error testing {strategy}: {e}")
-                results[strategy] = None
-            if parsed_args.compare and len(results) > 1:
-                _log_comparison(results, logger)
+            run_single_backtest(parsed_args, strategy, strategy_params, backtest_engine, output_dir, logger, results)
         logger.info("Backtesting completed successfully")
         
     except KeyboardInterrupt:
