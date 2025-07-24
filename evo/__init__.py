@@ -11,8 +11,8 @@ __author__ = "grant.t.morgan@gmail.com"
 
 from .core.config import Config
 from .core.logging import setup_logging
-from .optimization.genetic import Genome, GeneticSearch, FitnessEvaluator
-from .optimization.backtesting import BacktestEngine, TradingStrategy, PerformanceMetrics
+#from .optimization.genetic import Genome, GeneticSearch, FitnessEvaluator
+#from .optimization.backtesting import BacktestEngine, TradingStrategy, PerformanceMetrics
 
 __all__ = [
     "Config", 
