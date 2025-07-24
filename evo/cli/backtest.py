@@ -204,6 +204,8 @@ def extract_strategy_parameters(args: argparse.Namespace) -> dict:
     
     elif args.strategy == 'ppo':
         strategy_params['model'] = args.model_path
+    
+    return strategy_params
 
 
 def run_cross_validation(parsed_args, strategy, strategy_params, backtest_engine, output_dir, logger):
