@@ -80,6 +80,9 @@ def main():
     elif args.command == "backtest":
         from .backtest import backtest_command
         backtest_command(args.args)
+    elif args.command == "genetic":
+        from .genetic import genetic_command
+        genetic_command(args.args)
     elif args.command == "clean":
         clean_command(args)
     else:
