@@ -5,6 +5,7 @@
 *.pkl
 *.keras
 *.coverage
+*.egg-info
 
 # Directories to ignore
 **/__pycache__/
