@@ -30,7 +30,7 @@ def test_backtest_cli_random_strategy(minimal_csv_file, config_file, temp_dir):
     Test the backtest CLI with the random strategy and minimal CSV data.
     """
     args = [
-        '--data-path', str(minimal_csv_file),
+        '--input', str(minimal_csv_file),
         '--config', str(config_file),
         '--output-dir', str(temp_dir),
         '--length', '5',
@@ -51,7 +51,7 @@ def test_backtest_cli_moving_average(minimal_csv_file, config_file, temp_dir):
     Test the backtest CLI with the moving_average strategy.
     """
     args = [
-        '--data-path', str(minimal_csv_file),
+        '--input', str(minimal_csv_file),
         '--config', str(config_file),
         '--output-dir', str(temp_dir),
         '--length', '5',
@@ -73,7 +73,7 @@ def test_backtest_cli_cross_validation(minimal_csv_file, config_file, temp_dir):
     Test the backtest CLI with cross-validation mode for moving_average strategy.
     """
     args = [
-        '--data-path', str(minimal_csv_file),
+        '--input', str(minimal_csv_file),
         '--config', str(config_file),
         '--output-dir', str(temp_dir),
         '--length', '5',
@@ -98,7 +98,7 @@ def test_backtest_cli_mean_reversion(minimal_csv_file, config_file, temp_dir):
     Test the backtest CLI with the mean_reversion strategy.
     """
     args = [
-        '--data-path', str(minimal_csv_file),
+        '--input', str(minimal_csv_file),
         '--config', str(config_file),
         '--output-dir', str(temp_dir),
         '--length', '5',
@@ -120,7 +120,7 @@ def test_backtest_cli_momentum(minimal_csv_file, config_file, temp_dir):
     Test the backtest CLI with the momentum strategy.
     """
     args = [
-        '--data-path', str(minimal_csv_file),
+        '--input', str(minimal_csv_file),
         '--config', str(config_file),
         '--output-dir', str(temp_dir),
         '--length', '5',
@@ -143,7 +143,7 @@ def test_backtest_cli_ppo_missing_model(minimal_csv_file, config_file, temp_dir)
     Should log an error and continue gracefully.
     """
     args = [
-        '--data-path', str(minimal_csv_file),
+        '--input', str(minimal_csv_file),
         '--config', str(config_file),
         '--output-dir', str(temp_dir),
         '--length', '5',
@@ -167,7 +167,7 @@ def test_backtest_cli_missing_required_argument(minimal_csv_file, config_file, t
     Should log an error and exit.
     """
     args = [
-        '--data-path', str(minimal_csv_file),
+        '--input', str(minimal_csv_file),
         '--config', str(config_file),
         '--output-dir', str(temp_dir),
         '--length', '5',
