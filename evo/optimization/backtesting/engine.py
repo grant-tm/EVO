@@ -12,7 +12,6 @@ from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
-from stable_baselines3 import PPO
 from evo.core.logging import get_logger
 from .strategies import TradingStrategy, PPOStrategy, StrategyFactory
 from .metrics import PerformanceMetrics, PerformanceCalculator, MetricsAggregator
@@ -158,16 +157,11 @@ class BacktestEngine:
             start_idx = np.random.randint(0, max_start)
             data = data.iloc[start_idx:start_idx + length].reset_index(drop=True)
         
-        # Create strategy if string provided
-        if isinstance(strategy, str):
-            strategy = StrategyFactory.create_strategy(
-                strategy, 
-                initial_capital=self.initial_capital,
-                **strategy_kwargs
-            )
+        # Extract strategy
+        strategy_obj = extract_strategy_parameters(strategy, self.initial_capital, **strategy_kwargs)
         
         # Run backtest
-        return self._execute_backtest(strategy, data)
+        return run_single_backtest(self, strategy_obj, data)
     
     def run_backtest_with_model(
         self,
@@ -189,6 +183,7 @@ class BacktestEngine:
             Backtest result
         """
         # Load model
+        from stable_baselines3 import PPO
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model not found: {model_path}")
         
@@ -431,9 +426,8 @@ class CrossValidationEngine:
             
             try:
                 # Run backtest on test set
-                result = self.backtest_engine._execute_backtest(
-                    strategy, test_data
-                )
+                strategy_obj = extract_strategy_parameters(strategy, self.backtest_engine.initial_capital, **strategy_kwargs)
+                result = run_single_backtest(self.backtest_engine, strategy_obj, test_data)
                 results.append(result)
                 
             except Exception as e:
@@ -479,12 +473,39 @@ class CrossValidationEngine:
             
             try:
                 # Run backtest on window
-                result = self.backtest_engine._execute_backtest(
-                    strategy, window_data
-                )
+                strategy_obj = extract_strategy_parameters(strategy, self.backtest_engine.initial_capital, **strategy_kwargs)
+                result = run_single_backtest(self.backtest_engine, strategy_obj, window_data)
                 results.append(result)
                 
             except Exception as e:
                 logger.error(f"Walk-forward window {start_idx}-{end_idx} failed: {e}")
         
         return results 
+
+
+def extract_strategy_parameters(strategy: Union[TradingStrategy, str], initial_capital: float, **strategy_kwargs) -> TradingStrategy:
+    """Extract or create a TradingStrategy instance from input parameters."""
+    if isinstance(strategy, str):
+        return StrategyFactory.create_strategy(
+            strategy,
+            initial_capital=initial_capital,
+            **strategy_kwargs
+        )
+    else:
+        return strategy
+
+
+def run_single_backtest(engine: 'BacktestEngine', strategy: TradingStrategy, data: pd.DataFrame) -> BacktestResult:
+    """Run a single backtest using the provided engine, strategy, and data."""
+    return engine._execute_backtest(strategy, data)
+
+
+def run_cross_validation(cv_type: str, engine: 'BacktestEngine', strategy: Union[TradingStrategy, str], **cv_kwargs) -> List[BacktestResult]:
+    """Run cross-validation (time series or walk-forward) using the provided engine and strategy."""
+    cv_engine = CrossValidationEngine(engine)
+    if cv_type == 'time_series':
+        return cv_engine.run_time_series_cv(strategy, **cv_kwargs)
+    elif cv_type == 'walk_forward':
+        return cv_engine.run_walk_forward_cv(strategy, **cv_kwargs)
+    else:
+        raise ValueError(f"Unknown cross-validation type: {cv_type}") 
