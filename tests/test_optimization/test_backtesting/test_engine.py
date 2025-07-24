@@ -292,7 +292,7 @@ class TestBacktestEngine:
         model_path = temp_dir / "test_model.zip"
         model_path.touch()
         
-        with patch('evo.optimization.backtesting.engine.PPO') as mock_ppo:
+        with patch('stable_baselines3.PPO') as mock_ppo:
             mock_model = Mock()
             mock_ppo.load.return_value = mock_model
             
